@@ -1,0 +1,53 @@
+version: 2
+
+models:
+  - name: stg_weather
+    description: "Hourly weather per city, unioned across historical + daily sources."
+    columns:
+      - name: city_id
+        description: "3-letter city code"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('cities')
+                field: city_id
+      - name: observation_ts
+        data_tests:
+          - not_null
+      - name: temperature_c
+        description: "Air temperature in °C. Sanity-checked for Colombian climate range."
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: -15
+              max_value: 50
+              severity: warn
+      - name: relative_humidity_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+              severity: warn
+
+  - name: stg_air_quality
+    description: "OpenAQ daily measurements per sensor per city."
+    columns:
+      - name: city_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('cities')
+                field: city_id
+      - name: parameter_name
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["pm25", "pm10", "o3", "no2", "so2", "co"]
+      - name: value
+        data_tests:
+          - not_null
+      - name: observation_date
+        data_tests:
+          - not_null

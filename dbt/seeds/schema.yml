@@ -1,0 +1,38 @@
+version: 2
+
+seeds:
+  - name: cities
+    description: "Reference data for the 8 Colombian cities covered by the pipeline."
+    columns:
+      - name: city_id
+        description: "3-letter IATA-style airport code — used as the stable natural key everywhere."
+        data_tests:
+          - unique
+          - not_null
+      - name: name
+        data_tests:
+          - not_null
+      - name: department
+      - name: latitude
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: -90
+                max_value: 90
+      - name: longitude
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: -180
+                max_value: 180
+      - name: elevation_m
+        data_tests:
+          - not_null
+      - name: population
+        data_tests:
+          - not_null
+      - name: timezone
+        data_tests:
+          - not_null

@@ -1,0 +1,27 @@
+# Kept inside the project dir (not ~/.dbt) so Kestra can mount and reuse it.
+# Everything driver-specific is env-var driven so the same profile works
+# locally, inside Kestra, and in CI.
+
+colombia_env:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+      project: "{{ env_var('GCP_PROJECT') }}"
+      dataset: "{{ env_var('WAREHOUSE_DATASET', 'colombia_env_warehouse') }}"
+      location: "{{ env_var('BQ_REGION', 'us-central1') }}"
+      threads: 4
+      timeout_seconds: 300
+      priority: interactive
+    prod:
+      type: bigquery
+      method: service-account
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+      project: "{{ env_var('GCP_PROJECT') }}"
+      dataset: "{{ env_var('WAREHOUSE_DATASET', 'colombia_env_warehouse') }}"
+      location: "{{ env_var('BQ_REGION', 'us-central1') }}"
+      threads: 8
+      timeout_seconds: 600
+      priority: batch

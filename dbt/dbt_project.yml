@@ -1,0 +1,49 @@
+name: "colombia_env"
+version: "1.0.0"
+config-version: 2
+
+profile: "colombia_env"
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+analysis-paths: ["analyses"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Layered materialisations. Staging stays as views (cheap, always fresh reflection
+# of raw) while marts become tables (fast dashboard queries, predictable cost).
+# Fact tables are partitioned + clustered so Looker Studio queries stay cheap.
+models:
+  colombia_env:
+    +persist_docs:
+      relation: true
+      columns: true
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: ephemeral
+      +schema: intermediate
+    marts:
+      +materialized: table
+      +schema: marts
+
+seeds:
+  colombia_env:
+    +schema: seeds
+    cities:
+      +column_types:
+        city_id: STRING
+        name: STRING
+        department: STRING
+        latitude: FLOAT64
+        longitude: FLOAT64
+        elevation_m: INT64
+        population: INT64
+        timezone: STRING

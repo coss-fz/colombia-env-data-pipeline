@@ -1,0 +1,9 @@
+city_id,name,department,latitude,longitude,elevation_m,population,timezone
+BOG,Bogota,Cundinamarca,4.7110,-74.0721,2640,7743955,America/Bogota
+MDE,Medellin,Antioquia,6.2442,-75.5812,1495,2569007,America/Bogota
+CLO,Cali,Valle del Cauca,3.4516,-76.5320,1000,2227642,America/Bogota
+BAQ,Barranquilla,Atlantico,10.9639,-74.7964,18,1274250,America/Bogota
+CTG,Cartagena,Bolivar,10.3910,-75.4794,2,1055082,America/Bogota
+BGA,Bucaramanga,Santander,7.1193,-73.1227,959,614540,America/Bogota
+PEI,Pereira,Risaralda,4.8133,-75.6961,1411,482109,America/Bogota
+SMR,Santa Marta,Magdalena,11.2408,-74.1990,6,499192,America/Bogota

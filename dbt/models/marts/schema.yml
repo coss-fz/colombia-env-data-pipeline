@@ -1,0 +1,86 @@
+version: 2
+
+models:
+  - name: dim_cities
+    description: "City dimension with derived climate zone and population tier."
+    columns:
+      - name: city_id
+        description: "3-letter IATA-style code, unique primary key"
+        data_tests:
+          - unique
+          - not_null
+      - name: climate_zone
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [tierra_caliente, tierra_templada, tierra_fria, tierra_muy_fria, paramo]
+      - name: population_tier
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [medium, large, metropolitan]
+
+  - name: fct_weather_daily
+    description: "One row per (city, day). Partitioned by month, clustered by city_id."
+    columns:
+      - name: weather_sk
+        data_tests:
+          - unique
+          - not_null
+      - name: city_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_cities')
+                field: city_id
+      - name: observation_date
+        data_tests:
+          - not_null
+      - name: avg_temperature_c
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: -15
+              max_value: 45
+              severity: warn
+
+  - name: fct_air_quality_daily
+    description: "One row per (city, pollutant, day)."
+    columns:
+      - name: air_quality_sk
+        data_tests:
+          - unique
+          - not_null
+      - name: city_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_cities')
+                field: city_id
+      - name: parameter_name
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["pm25", "pm10", "o3", "no2", "so2", "co"]
+
+  - name: fct_environmental_stress
+    description: "Combined weather + air-quality table powering the dashboard. One row per (city, day)."
+    columns:
+      - name: stress_sk
+        data_tests:
+          - unique
+          - not_null
+      - name: city_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_cities')
+                field: city_id
+      - name: environmental_stress_score
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100

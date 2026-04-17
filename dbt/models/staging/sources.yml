@@ -1,0 +1,52 @@
+version: 2
+
+sources:
+  - name: raw
+    database: "{{ env_var('GCP_PROJECT') }}"
+    schema: "{{ env_var('RAW_DATASET', 'colombia_env_raw') }}"
+    description: "External BigQuery tables pointing at parquet files in GCS."
+
+    tables:
+      - name: ext_weather_hourly
+        description: "Hive-partitioned historical hourly weather. Populated by the Open-Meteo backfill."
+        columns:
+          - name: city_id
+            description: "3-letter IATA-style code (partition column)"
+            data_tests:
+              - not_null
+          - name: observation_ts
+            description: "Hour-resolution timestamp in the city's local timezone"
+            data_tests:
+              - not_null
+          - name: temperature_2m
+            description: "Air temperature at 2 m (°C)"
+
+      - name: ext_weather_daily
+        description: "Daily incremental pull of yesterday's observations across all cities."
+        columns:
+          - name: city_id
+            data_tests:
+              - not_null
+          - name: observation_ts
+            data_tests:
+              - not_null
+
+      - name: ext_air_quality
+        description: "Daily OpenAQ measurements aggregated per sensor/pollutant."
+        columns:
+          - name: city_id
+            data_tests:
+              - not_null
+          - name: parameter_name
+            description: "One of pm25, pm10, o3, no2, so2, co"
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ["pm25", "pm10", "o3", "no2", "so2", "co"]
+          - name: observation_date
+            data_tests:
+              - not_null
+
+      - name: ext_weather_streaming
+        description: "Simulated real-time sensor stream persisted by the Kafka consumer."
