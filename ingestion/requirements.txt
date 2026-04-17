@@ -1,0 +1,6 @@
+# Pinned to patch-level for reproducible builds. These ranges tested with Python 3.11.
+pandas==2.2.3
+pyarrow==17.0.0
+requests==2.32.3
+urllib3==2.2.3
+google-cloud-storage==2.18.2

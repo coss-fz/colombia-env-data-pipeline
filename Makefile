@@ -97,7 +97,7 @@ dbt-docs: ## Generate + serve dbt docs on localhost:8000
 # ------------------------------------------------------------------------------
 .PHONY: ingest-historical ingest-daily ingest-air-quality
 ingest-historical: build-ingestion ## Run the historical weather backfill once
-	docker run --rm \
+	MSYS_NO_PATHCONV=1 docker run --rm \
 	  -v $$GOOGLE_APPLICATION_CREDENTIALS:/secrets/gcp-sa.json:ro \
 	  -e GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-sa.json \
 	  -e GCS_BUCKET=$$GCS_BUCKET \
@@ -105,7 +105,7 @@ ingest-historical: build-ingestion ## Run the historical weather backfill once
 	  python -m weather.fetch_historical_weather --start-date 2020-01-01 --end-date 2024-12-31
 
 ingest-daily: build-ingestion ## Run yesterday's weather ingestion
-	docker run --rm \
+	MSYS_NO_PATHCONV=1 docker run --rm \
 	  -v $$GOOGLE_APPLICATION_CREDENTIALS:/secrets/gcp-sa.json:ro \
 	  -e GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-sa.json \
 	  -e GCS_BUCKET=$$GCS_BUCKET \
@@ -113,7 +113,7 @@ ingest-daily: build-ingestion ## Run yesterday's weather ingestion
 	  python -m weather.fetch_weather
 
 ingest-air-quality: build-ingestion ## Pull the last 7 days of OpenAQ data
-	docker run --rm \
+	MSYS_NO_PATHCONV=1 docker run --rm \
 	  -v $$GOOGLE_APPLICATION_CREDENTIALS:/secrets/gcp-sa.json:ro \
 	  -e GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-sa.json \
 	  -e GCS_BUCKET=$$GCS_BUCKET \
