@@ -1,0 +1,118 @@
+###############################################################################
+# Colombia Environmental Data Pipeline — GCP infrastructure
+#
+# Provisions three things:
+#   1. A regional GCS bucket for raw parquet files (landing zone)
+#   2. A "raw" BigQuery dataset for external tables pointing at that bucket
+#   3. A "warehouse" BigQuery dataset where dbt builds staging + mart tables
+#
+# Everything lives in one file intentionally — this project is small enough
+# that splitting into modules would be more ceremony than benefit.
+###############################################################################
+
+terraform {
+  required_version = ">= 1.5"
+
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.40"
+    }
+  }
+}
+
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
+# ---------- Raw data lake -----------------------------------------------------
+
+resource "google_storage_bucket" "data_lake" {
+  name          = var.bucket_name
+  location      = var.region
+  force_destroy = false # tf destroy should NOT nuke real data by accident
+
+  storage_class               = "STANDARD"
+  uniform_bucket_level_access = true
+
+  # Autoclass moves cold objects to cheaper tiers automatically. With parquet
+  # partitions we write once and read many, which matches its heuristics well.
+  autoclass {
+    enabled = true
+  }
+
+  # Versioning is cheap insurance against a bad overwrite.
+  versioning {
+    enabled = true
+  }
+
+  labels = {
+    project = "colombia-env"
+    managed = "terraform"
+  }
+}
+
+# ---------- BigQuery: raw (external tables read from GCS) ---------------------
+
+resource "google_bigquery_dataset" "raw" {
+  dataset_id                 = "${var.dataset_prefix}_raw"
+  friendly_name              = "Colombia Env — Raw"
+  description                = "External tables over parquet files in the GCS landing zone"
+  location                   = var.region
+  delete_contents_on_destroy = false
+
+  labels = {
+    project = "colombia-env"
+    layer   = "raw"
+    managed = "terraform"
+  }
+}
+
+# ---------- BigQuery: warehouse (dbt writes here) -----------------------------
+
+resource "google_bigquery_dataset" "warehouse" {
+  dataset_id                 = "${var.dataset_prefix}_warehouse"
+  friendly_name              = "Colombia Env — Warehouse"
+  description                = "dbt staging + intermediate + mart models"
+  location                   = var.region
+  delete_contents_on_destroy = false
+
+  labels = {
+    project = "colombia-env"
+    layer   = "warehouse"
+    managed = "terraform"
+  }
+}
+
+# ---------- Optional: dedicated service account for the pipeline --------------
+# Only created when create_service_account = true, so the default flow stays
+# simple for local/personal GCP accounts but a "do it right" path exists.
+
+resource "google_service_account" "pipeline_sa" {
+  count        = var.create_service_account ? 1 : 0
+  account_id   = "colombia-env"
+  display_name = "Colombia Env Pipeline"
+  description  = "Runs Kestra ingestion + dbt + Spark jobs"
+}
+
+resource "google_project_iam_member" "sa_storage" {
+  count   = var.create_service_account ? 1 : 0
+  project = var.project_id
+  role    = "roles/storage.objectAdmin"
+  member  = "serviceAccount:${google_service_account.pipeline_sa[0].email}"
+}
+
+resource "google_project_iam_member" "sa_bq_data" {
+  count   = var.create_service_account ? 1 : 0
+  project = var.project_id
+  role    = "roles/bigquery.dataEditor"
+  member  = "serviceAccount:${google_service_account.pipeline_sa[0].email}"
+}
+
+resource "google_project_iam_member" "sa_bq_job" {
+  count   = var.create_service_account ? 1 : 0
+  project = var.project_id
+  role    = "roles/bigquery.jobUser"
+  member  = "serviceAccount:${google_service_account.pipeline_sa[0].email}"
+}

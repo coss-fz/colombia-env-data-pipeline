@@ -1,0 +1,10 @@
+# Copy this file to terraform.tfvars and fill in real values.
+# Do NOT commit terraform.tfvars — it's in .gitignore.
+
+project_id     = "your-gcp-project-id"
+region         = "us-central1"                                    # or southamerica-east1 for lower latency from Colombia
+bucket_name    = "colombia-env-pipeline-your-unique-suffix"        # must be globally unique
+dataset_prefix = "colombia_env"
+
+# Flip to true if you want terraform to also manage a dedicated service account.
+create_service_account = false
