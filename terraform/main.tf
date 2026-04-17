@@ -1,14 +1,10 @@
 ###############################################################################
 # Colombia Environmental Data Pipeline — GCP infrastructure
-#
 # Provisions three things:
 #   1. A regional GCS bucket for raw parquet files (landing zone)
 #   2. A "raw" BigQuery dataset for external tables pointing at that bucket
-#   3. A "warehouse" BigQuery dataset where dbt builds staging + mart tables
-#
-# Everything lives in one file intentionally — this project is small enough
-# that splitting into modules would be more ceremony than benefit.
 ###############################################################################
+
 
 terraform {
   required_version = ">= 1.5"
@@ -26,8 +22,28 @@ provider "google" {
   region  = var.region
 }
 
-# ---------- Raw data lake -----------------------------------------------------
 
+# ---------- API enablement ----------------------------------------------------
+resource "google_project_service" "dataproc" {
+  project            = var.project_id
+  service            = "dataproc.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "bigquery" {
+  project            = var.project_id
+  service            = "bigquery.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "storage" {
+  project            = var.project_id
+  service            = "storage.googleapis.com"
+  disable_on_destroy = false
+}
+
+
+# ---------- Raw data lake -----------------------------------------------------
 resource "google_storage_bucket" "data_lake" {
   name          = var.bucket_name
   location      = var.region
@@ -53,8 +69,8 @@ resource "google_storage_bucket" "data_lake" {
   }
 }
 
-# ---------- BigQuery: raw (external tables read from GCS) ---------------------
 
+# ---------- BigQuery: raw (external tables read from GCS) ---------------------
 resource "google_bigquery_dataset" "raw" {
   dataset_id                 = "${var.dataset_prefix}_raw"
   friendly_name              = "Colombia Env — Raw"
@@ -65,22 +81,6 @@ resource "google_bigquery_dataset" "raw" {
   labels = {
     project = "colombia-env"
     layer   = "raw"
-    managed = "terraform"
-  }
-}
-
-# ---------- BigQuery: warehouse (dbt writes here) -----------------------------
-
-resource "google_bigquery_dataset" "warehouse" {
-  dataset_id                 = "${var.dataset_prefix}_warehouse"
-  friendly_name              = "Colombia Env — Warehouse"
-  description                = "dbt staging + intermediate + mart models"
-  location                   = var.region
-  delete_contents_on_destroy = false
-
-  labels = {
-    project = "colombia-env"
-    layer   = "warehouse"
     managed = "terraform"
   }
 }
@@ -114,5 +114,28 @@ resource "google_project_iam_member" "sa_bq_job" {
   count   = var.create_service_account ? 1 : 0
   project = var.project_id
   role    = "roles/bigquery.jobUser"
+  member  = "serviceAccount:${google_service_account.pipeline_sa[0].email}"
+}
+
+# The SA also implicitly needs `roles/iam.serviceAccountUser` on *itself* — we
+# grant that by binding the SA as a member on its own resource.
+resource "google_project_iam_member" "sa_dataproc_worker" {
+  count   = var.create_service_account ? 1 : 0
+  project = var.project_id
+  role    = "roles/dataproc.worker"
+  member  = "serviceAccount:${google_service_account.pipeline_sa[0].email}"
+}
+
+resource "google_service_account_iam_member" "sa_act_as_self" {
+  count              = var.create_service_account ? 1 : 0
+  service_account_id = google_service_account.pipeline_sa[0].name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.pipeline_sa[0].email}"
+}
+
+resource "google_project_iam_member" "sa_dataproc_editor" {
+  count   = var.create_service_account ? 1 : 0
+  project = var.project_id
+  role    = "roles/dataproc.editor"
   member  = "serviceAccount:${google_service_account.pipeline_sa[0].email}"
 }

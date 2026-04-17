@@ -8,11 +8,6 @@ output "raw_dataset" {
   value       = google_bigquery_dataset.raw.dataset_id
 }
 
-output "warehouse_dataset" {
-  description = "BigQuery dataset where dbt writes staging/intermediate/mart tables."
-  value       = google_bigquery_dataset.warehouse.dataset_id
-}
-
 output "service_account_email" {
   description = "Service account email (empty string if create_service_account = false)."
   value       = var.create_service_account ? google_service_account.pipeline_sa[0].email : ""
