@@ -1,0 +1,81 @@
+version: "3.8"
+
+# Single-broker KRaft-mode Kafka cluster (no ZooKeeper needed in 3.x+).
+# One broker is fine for a demo — the streaming simulation writes at single-digit
+# msgs/sec which any Kafka config can swallow trivially.
+
+services:
+  kafka-core:
+    image: confluentinc/cp-kafka:7.7.0
+    container_name: kafka-core
+    hostname: kafka
+    ports:
+      - "9092:9092"     # for host-side consumers (schema registry UI, kcat, etc.)
+      - "29092:29092"   # for containers on the same network (the producer/consumer)
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_LISTENERS: "PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # Random UUID generated for the cluster on first boot — required by KRaft.
+      CLUSTER_ID: "5L6g3nShT-eMCtK--X86sw"
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # UI for poking at topics during development — not required for the pipeline itself.
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: colombia-env
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      kafka-core:
+        condition: service_healthy
+    restart: unless-stopped
+
+  producer:
+    build:
+      context: ./producer
+    container_name: weather-producer
+    environment:
+      KAFKA_BOOTSTRAP: kafka:29092
+      KAFKA_TOPIC: weather.sensor.readings
+      EMIT_INTERVAL_SEC: "2"
+    depends_on:
+      kafka-core:
+        condition: service_healthy
+    restart: unless-stopped
+
+  consumer:
+    build:
+      context: ./consumer
+    container_name: weather-consumer
+    environment:
+      KAFKA_BOOTSTRAP: kafka:29092
+      KAFKA_TOPIC: weather.sensor.readings
+      KAFKA_GROUP_ID: weather-sink-gcs
+      GCS_BUCKET: "${GCS_BUCKET}"
+      GOOGLE_APPLICATION_CREDENTIALS: "/secrets/gcp-sa.json"
+      BATCH_SIZE: "100"
+      BATCH_TIMEOUT_SEC: "30"
+    volumes:
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-/dev/null}:/secrets/gcp-sa.json:ro
+    depends_on:
+      kafka-core:
+        condition: service_healthy
+    restart: unless-stopped
