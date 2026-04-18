@@ -6,6 +6,18 @@ Built as the capstone project for the [DataTalksClub Data Engineering Zoomcamp](
 
 
 
+## Table of Contents
+- [Problem statement](#problem-statement)
+- [Questions the dashboard answers](#questions-the-dashboard-answers)
+- [The 8 cities](#the-8-cities)
+- [Repository layout](#repository-layout)
+- [Quick start](#quick-start)
+- [How each zoomcamp module is covered](#how-each-zoomcamp-module-is-covered)
+- [Operational notes](#operational-notes)
+- [What I would add next](#what-i-would-add-next)
+- [System Architecture](docs/architecture.md)
+- [Acknowledgements](#acknowledgements)
+
 ---
 ## Problem statement
 Colombia is a country of dramatic environmental diversity: Bogotá sits at 2,640 m and rarely breaks 20 °C, Barranquilla sits at sea level and rarely drops below 25 °C, and Medellín — the "city of eternal spring" — is wedged between mountains that trap pollution in predictable patterns. Air quality and climate are closely tied to **elevation**, **time of year**, and **population density**, but that relationship is hard to see without aligning multiple datasets on a consistent schema.
@@ -79,7 +91,7 @@ colombia-environmental-pipeline/
 │   ├── architecture.md
 │   ├── dashboard.md
 │   └── troubleshooting.md
-├── images/
+├── images/                         # Evidences of the pipeline processing
 ├── .env
 ├── .gitignore
 ├── LICENSE
@@ -157,14 +169,15 @@ make kafka-up
 This captures the data through the API as soon as it is updated in the web page
 
 
-### 5. (Recommended) Run the process with an orchestration with kestra
+### 5. (Recommended) Run the process with Kestra orchestration
 ```bash
 make kestra-up
 ```
-1. Add the `gcp_credentials.json` file to the namesapce files under the name `gcp_key.json` (this is neccessary for the python tasks).
-2. Import the workflows in `kestra/flows/`.
-3. Add KV pairs in the Store (GCP_PROJECT, GCS_BUCKET, BQ_REGION, RAW_DATASET, WAREHOUSE_DATASET, DATAPROC_REGION, DATAPROC_SERVICE_ACCOUNT, OPENAQ_API_KEY).
-4. Run all the worflows in order.
+1. Import the workflows in `kestra/flows/`.
+2. Add the `gcp_credentials.json` file to the namespace files under the name `gcp-key.json` (this is necessary for the Python & dbt tasks).
+3. Add the `dbt/` folder to the namesapce files under the name `dbt/` (this is neccessary for the dbt tasks).
+4. Add KV pairs in the Store: GCP_PROJECT, GCS_BUCKET, BQ_REGION, RAW_DATASET, WAREHOUSE_DATASET, OPENAQ_API_KEY.
+5. Run all the worflows in order.
 
 
 ### 6. (Optional) Run the process locally fot testing
@@ -247,7 +260,7 @@ stay inside GCP's always-free tier or cents-per-month.
 
 
 ---
-## What I'd add next
+## What I would add next
 Honest roadmap rather than a "future work" checkbox:
 - **dbt snapshots** on `dim_cities` — the seed is static today but demographic changes over time would be good to track.
 - **Great Expectations** or **dbt-expectations** on the raw layer for pre-dbt quality gates.
