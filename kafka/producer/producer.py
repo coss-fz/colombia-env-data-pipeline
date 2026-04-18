@@ -27,7 +27,6 @@ import requests
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
 
-# Inlined city list so this container has no dependency on the ingestion module.
 CITIES = [
     ("BOG", "Bogota",        4.7110, -74.0721),
     ("MDE", "Medellin",      6.2442, -75.5812),
@@ -51,8 +50,6 @@ def build_producer() -> KafkaProducer:
         bootstrap_servers=bootstrap,
         value_serializer=lambda v: json.dumps(v, default=str).encode("utf-8"),
         key_serializer=lambda k: k.encode("utf-8") if k else None,
-        # Durability > throughput for a demo: wait for all in-sync replicas.
-        # (With one broker that just means "wait for broker".)
         acks="all",
         linger_ms=20,
         retries=5,
@@ -86,8 +83,6 @@ def fetch_current(city_id: str, lat: float, lon: float) -> dict | None:
 
 def build_payload(city_id: str, city_name: str, lat: float, lon: float, current: dict) -> dict:
     """Shape the message. Schema is stable — dbt + the consumer depend on it."""
-    # Add a pinch of sensor noise so we can tell the streaming feed apart from
-    # the batch feed when both are present (and it looks more realistic).
     noise = random.uniform(-0.3, 0.3)
 
     return {

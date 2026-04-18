@@ -16,9 +16,6 @@ clean-targets:
   - "target"
   - "dbt_packages"
 
-# Layered materialisations. Staging stays as views (cheap, always fresh reflection
-# of raw) while marts become tables (fast dashboard queries, predictable cost).
-# Fact tables are partitioned + clustered so Looker Studio queries stay cheap.
 models:
   colombia_env:
     +persist_docs:

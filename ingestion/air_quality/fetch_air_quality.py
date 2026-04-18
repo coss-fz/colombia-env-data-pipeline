@@ -172,7 +172,7 @@ def run() -> None:
             df = normalise(records, city, sensor)
             if not df.empty:
                 all_frames.append(df)
-            time.sleep(0.2)  # polite pacing — OpenAQ rate limits vary by plan
+            time.sleep(0.2)
 
     if not all_frames:
         logger.warning("No air-quality measurements returned for window %s–%s", start, end)

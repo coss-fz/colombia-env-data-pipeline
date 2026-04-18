@@ -153,7 +153,6 @@ def run(start_date: date, end_date: date) -> None:
             )
             upload_dataframe_as_parquet(df, bucket, blob_path)
             total_rows += len(df)
-            # Be polite: Open-Meteo allows ~10k requests/day but we don't need to burn through it.
             time.sleep(0.3)
 
     logger.info("Historical backfill complete: %s rows across %d cities", f"{total_rows:,}", len(CITIES))
