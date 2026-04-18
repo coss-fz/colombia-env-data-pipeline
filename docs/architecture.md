@@ -13,21 +13,20 @@ flowchart LR
         OAQ[OpenAQ v3<br/>Air Quality]
     end
 
-    subgraph Orchestration["Module 2 — Kestra"]
+    subgraph Orchestration["Kestra"]
         K1[01 historical backfill]
         K2[02 daily weather]
         K3[03 daily air quality]
         K4[04 run dbt]
-        K5[05 spark aggregations]
     end
 
-    subgraph Streaming["Module 6 — Kafka"]
+    subgraph Streaming["Kafka"]
         PROD[Producer<br/>IoT sensor simulator]
         BROKER[(Kafka broker<br/>KRaft mode)]
         CONS[Consumer<br/>Batches to parquet]
     end
 
-    subgraph Storage["Module 1 — GCS Data Lake"]
+    subgraph Storage["GCS Data Lake"]
         RAW_W[(raw/weather/<br/>city_id=/year=/month=)]
         RAW_WD[(raw/weather_daily/)]
         RAW_AQ[(raw/air_quality/)]
@@ -35,21 +34,21 @@ flowchart LR
         PROC[(processed/<br/>Spark outputs)]
     end
 
-    subgraph Warehouse["Module 3 — BigQuery"]
+    subgraph Warehouse["BigQuery"]
         EXT[External tables<br/>colombia_env_raw]
         STG[Staging views<br/>_staging]
         MARTS[Mart tables<br/>_marts]
     end
 
-    subgraph Transform["Module 4 — dbt"]
+    subgraph Transform["dbt"]
         DBT[dbt BigQuery adapter]
     end
 
-    subgraph Compute["Module 5 — Spark"]
+    subgraph Compute["Spark"]
         SPARK[PySpark job<br/>monthly normals,<br/>rolling windows,<br/>heat-wave detection]
     end
 
-    DASH[Looker Studio<br/>Dashboard]
+    DASH[Power BI<br/>Dashboard]
 
     OM --> K1
     OM --> K2
@@ -67,11 +66,11 @@ flowchart LR
     RAW_WD --> EXT
     RAW_AQ --> EXT
     STREAM --> EXT
-    PROC --> EXT
+    PROC --> MARTS
 
     K2 --> K4
     K3 --> K4
-    K5 --> SPARK --> PROC
+    SPARK --> PROC
 
     K4 --> DBT
     EXT --> DBT
@@ -92,7 +91,7 @@ flowchart LR
 
 
 ### 2. Orchestration (Kestra)
-Four flows live under `kestra/flows/`. `03_setup_external_tables` is a one-shot DDL runner; the numbered rest of tht flows are the pipeline itself.
+Four flows live under `kestra/flows/`. `03_setup_external_tables` is a one-shot DDL runner; the rest of the flows are the pipeline itself.
 
 
 ### 3. Storage (GCS)
@@ -108,8 +107,9 @@ gs://$BUCKET/
 
 
 ### 4. Warehouse (BigQuery)
-Two datasets groups:
-- `colombia_env_raw` holds external tables pointing at the GCS layout above — no bytes are moved into BigQuery storage, which keeps costs near zero. `colombia_env_warehouse_` groupholds the materialised models that dbt & sparks build.
+Two dataset groups:
+- `colombia_env_raw` holds external tables pointing at the GCS layout above — no bytes are moved into BigQuery storage, which keeps costs near zero.
+- `colombia_env_warehouse_` group holds the materialised models that dbt & Spark build.
 
 
 ### 5. Transformation (dbt)
@@ -122,7 +122,7 @@ All mart facts are **partitioned by month on `observation_date` and clustered by
 
 
 ### 6. Batch compute (Spark)
-The Spark job computes things that are awkward in pure SQL: climate normals needing the full history to derive the baseline, 30-day rolling windows on timestamp ranges, and consecutive-day pattern detection for heat waves. Output parquet feeds back into the warehouse via adirect load to BigQuery tables.
+The Spark job computes things that are awkward in pure SQL: climate normals needing the full history to derive the baseline, 30-day rolling windows on timestamp ranges, and consecutive-day pattern detection for heat waves. Output parquet feeds back into the warehouse via a direct load to BigQuery tables.
 
 
 ### 7. Streaming (Kafka)
@@ -144,7 +144,7 @@ The zoomcamp uses Kestra, and it's a better fit here — YAML flows, built-in Do
 We only use OpenAQ in this build, but Open-Meteo also ships a CAMS-based air quality API that needs no key. If OpenAQ's ground coverage is sparse in a given city, swapping that city's source is a one-line change in the ingestion script.
 
 **Why a combined `fct_environmental_stress` instead of joining in the BI/Analytical tool?**
-Looker Studio gets charged for every unique query shape, and joining the two big facts live would cost more than pre-computing. The combined table is small and cheap to re-materialise on every dbt run.
+Power BI is not very optimized for data manipulation, and joining the two big facts live would be less cost-efficient than pre-computing. The combined table is small and cheap to re-materialise on every dbt run.
 
 **Why use Dataproc and Spark for monthly aggregations?**
 When we have a huge amount of data that is also difficult to process directly with SQL, Spark is one of the best options to do the transformations since it leverages in parallel processing. The election of Dataproc was just because is a native GCP service to create spark clusters and run jobs.
