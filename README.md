@@ -11,11 +11,12 @@ Built as the capstone project for the [DataTalksClub Data Engineering Zoomcamp](
 - [Questions the dashboard answers](#questions-the-dashboard-answers)
 - [The 8 cities](#the-8-cities)
 - [Repository layout](#repository-layout)
+- [System Architecture](#system-architecture)
+- [Dashboard](#dashboard)
 - [Quick start](#quick-start)
 - [How each zoomcamp module is covered](#how-each-zoomcamp-module-is-covered)
 - [Operational notes](#operational-notes)
 - [What I would add next](#what-i-would-add-next)
-- [System Architecture](docs/architecture.md)
 - [Acknowledgements](#acknowledgements)
 
 ---
@@ -98,6 +99,71 @@ colombia-environmental-pipeline/
 ├── Makefile
 └── README.md
 ```
+
+
+
+
+---
+## System Architecture
+This pipeline implements a **modular, cloud-native data engineering architecture** that follows industry best practices for handling environmental data at scale.
+
+### Overview
+The system is built on **seven key layers**:
+1. **Sources** — External APIs (Open-Meteo for weather, OpenAQ v3 for air quality).
+2. **Orchestration** — Kestra orchestrates scheduled ingestion and transformations.
+3. **Streaming** — Kafka producer simulates real-time IoT sensor readings into a message broker.
+4. **Storage** — GCS data lake with hive-style partitioning for efficient querying.
+5. **Warehouse** — BigQuery with external tables for cost-effective raw storage.
+6. **Transformation** — dbt models organized in staging → intermediate → marts layers.
+7. **Compute** — PySpark jobs for complex historical aggregations (rolling windows, heat-wave detection).
+8. **Visualization** — Power BI dashboard surfaces insights.
+
+### Data Flow
+- **Batch ingestion**: Kestra pulls historical and daily data from Open-Meteo and OpenAQ, landing parquet files in GCS.
+- **Real-time streaming**: Kafka producer emits IoT sensor readings every few seconds; consumer batches them to GCS.
+- **Transformations**: dbt models stack in three layers — staging models clean and union all sources, intermediate models deduplicate and roll up to daily grain, and mart models create fact tables optimized for dashboards.
+- **Advanced analytics**: PySpark computes climate normals and heat-wave patterns monthly, writing back to BigQuery.
+- **Cost efficiency**: External tables point to GCS, so raw data stays cheap; marts are small, partitioned, and clustered for fast queries.
+
+For a detailed technical breakdown, see [docs/architecture.md](docs/architecture.md).
+
+
+
+
+---
+## Dashboard
+The analysis is visualized in an **interactive Power BI dashboard** that tracks environmental stress across Colombia's eight largest cities. The dashboard provides insights into weather patterns, air quality, and their combined impact.
+
+For a detailed view of the dashboard, see [docs/dashboard.pbix](docs/dashboard.pbix).
+
+### Dashboard View
+![Dashboard Preview](docs/dashboard_gif.gif)
+
+
+### Dashboard Pages & Features
+The dashboard is organized into **3 interactive pages**, all filterable by **date range** and **city selection**:
+
+
+#### **Page 1: Weather Indicators**
+Current-state snapshots of environmental conditions for each of the 8 Colombian cities:
+- **Weather & Air Quality Metrics**: PM2.5, humidity, temperature, pressure, and wind speed.
+- **Environmental Stress Score**: Composite metric (0–100) combining heat, humidity, and pollution.
+
+
+#### **Page 2: Weather Tendencies Over Time**
+Historical trends across the selected date range:
+- **Time Trends**: Visualization to know the behaviour of some weather indicators.
+
+
+#### **Page 3: Environmental & Weather Anomalies**
+Detection and visualization of unusual conditions:
+- **Heat Wave Detection**: Flags consecutive days where temperature exceeds the historical 95th percentile; shows count and duration.
+- **Anomaly Indicators**: Statistical outliers for some weather indicators.
+
+
+### Filters & Interactivity
+- **Date Range Picker**: Select any period from 2020–present.
+- **City Selector**: Multi-select to compare specific cities or focus on one region.
 
 
 
