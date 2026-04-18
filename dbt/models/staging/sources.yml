@@ -42,8 +42,7 @@ sources:
             data_tests:
               - not_null
               - accepted_values:
-                  arguments:
-                    values: ["pm25", "pm10", "o3", "no2", "so2", "co"]
+                  values: ["pm25", "pm10", "o3", "no2", "so2", "co"]
           - name: observation_date
             data_tests:
               - not_null

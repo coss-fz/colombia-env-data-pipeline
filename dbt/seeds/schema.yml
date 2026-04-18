@@ -17,16 +17,14 @@ seeds:
         data_tests:
           - not_null
           - dbt_utils.accepted_range:
-              arguments:
-                min_value: -90
-                max_value: 90
+              min_value: -90
+              max_value: 90
       - name: longitude
         data_tests:
           - not_null
           - dbt_utils.accepted_range:
-              arguments:
-                min_value: -180
-                max_value: 180
+              min_value: -180
+              max_value: 180
       - name: elevation_m
         data_tests:
           - not_null

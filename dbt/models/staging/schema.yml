@@ -9,9 +9,8 @@ models:
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('cities')
-                field: city_id
+              to: ref('cities')
+              field: city_id
       - name: observation_ts
         data_tests:
           - not_null
@@ -36,15 +35,13 @@ models:
         data_tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('cities')
-                field: city_id
+              to: ref('cities')
+              field: city_id
       - name: parameter_name
         data_tests:
           - not_null
           - accepted_values:
-              arguments:
-                values: ["pm25", "pm10", "o3", "no2", "so2", "co"]
+              values: ["pm25", "pm10", "o3", "no2", "so2", "co"]
       - name: value
         data_tests:
           - not_null
