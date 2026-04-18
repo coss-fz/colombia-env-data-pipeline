@@ -1,0 +1,28 @@
+id: 02_ingest_air_quality
+namespace: colombia_env
+
+description: |
+  Pulls daily aggregated air-quality readings from OpenAQ v3 for all 8 cities.
+  Uses a 7-day sliding window so late-arriving data from slow-reporting
+  stations eventually lands in the warehouse.
+
+  Requires OPENAQ_API_KEY to be set in Kestra's KV store or passed as a secret.
+
+tasks:
+  - id: fetch_openaq
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: colombia-env-ingestion:latest
+    namespaceFiles:
+      enabled: true
+      include:
+        - gcp-key.json
+    env:
+      GCS_BUCKET: "{{ kv('GCS_BUCKET') }}"
+      GOOGLE_CLOUD_PROJECT: "{{ kv('GCP_PROJECT') }}"
+      OPENAQ_API_KEY: "{{ kv('OPENAQ_API_KEY') }}"
+    commands:
+      - export GOOGLE_APPLICATION_CREDENTIALS="$WORKING_DIR/gcp-key.json" && python -m air_quality.fetch_air_quality
+    retry:
+      type: constant
+      maxAttempt: 3
+      interval: PT10M

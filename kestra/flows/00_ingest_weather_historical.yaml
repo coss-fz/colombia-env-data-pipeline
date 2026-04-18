@@ -1,0 +1,45 @@
+id: 00_ingest_weather_historical
+namespace: colombia_env
+
+description: |
+  One-shot backfill of historical weather for every city over a configurable
+  date range. Run this once when you first set up the pipeline, then let the
+  daily flow (02_ingest_weather_daily) take over.
+
+inputs:
+  - id: start_date
+    type: STRING
+    defaults: "2020-01-01"
+    description: First date to backfill (inclusive, YYYY-MM-DD)
+  - id: end_date
+    type: STRING
+    defaults: "2025-12-31"
+    description: Last date to backfill (inclusive, YYYY-MM-DD)
+
+tasks:
+  - id: log_start
+    type: io.kestra.plugin.core.log.Log
+    message: "Starting historical weather backfill {{ inputs.start_date }} → {{ inputs.end_date }}"
+
+  - id: run_backfill
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: colombia-env-ingestion:latest
+    namespaceFiles:
+      enabled: true
+      include:
+        - gcp-key.json
+    env:
+      GCS_BUCKET: "{{ kv('GCS_BUCKET') }}"
+      GOOGLE_CLOUD_PROJECT: "{{ kv('GCP_PROJECT') }}"
+    commands:
+      - export GOOGLE_APPLICATION_CREDENTIALS="$WORKING_DIR/gcp-key.json" && python -m weather.fetch_historical_weather --start-date {{ inputs.start_date }} --end-date {{ inputs.end_date }}
+
+  - id: log_done
+    type: io.kestra.plugin.core.log.Log
+    message: "Historical backfill finished"
+
+errors:
+  - id: alert_failure
+    type: io.kestra.plugin.core.log.Log
+    level: ERROR
+    message: "Weather backfill FAILED — inspect the execution logs before retrying."

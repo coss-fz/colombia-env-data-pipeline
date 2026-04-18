@@ -1,0 +1,31 @@
+id: 01_ingest_weather_daily
+namespace: colombia_env
+
+description: |
+  Pull of yesterday's hourly weather observations for all 8 cities.
+  ERA5 archive has finalised yesterday, early enough to feed morning dashboards.
+
+inputs:
+  - id: target_date
+    type: STRING
+    required: false
+    description: Override for the target date (YYYY-MM-DD). Leave blank to use yesterday.
+
+tasks:
+  - id: fetch_weather
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: colombia-env-ingestion:latest
+    namespaceFiles:
+      enabled: true
+      include:
+        - gcp-key.json
+    env:
+      GCS_BUCKET: "{{ kv('GCS_BUCKET') }}"
+      GOOGLE_CLOUD_PROJECT: "{{ kv('GCP_PROJECT') }}"
+      TARGET_DATE: "{{ inputs.target_date ?? '' }}"
+    commands:
+      - export GOOGLE_APPLICATION_CREDENTIALS="$WORKING_DIR/gcp-key.json" && python -m weather.fetch_weather
+    retry:
+      type: constant
+      maxAttempt: 3
+      interval: PT5M

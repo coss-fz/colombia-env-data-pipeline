@@ -1,0 +1,33 @@
+id: 04_run_dbt
+namespace: colombia_env
+
+description: |
+  Runs dbt staging → intermediate → marts, plus tests. Called as a subflow
+  from the daily ingestion pipelines, but can also be kicked off manually.
+
+tasks:
+  - id: dbt_build
+    type: io.kestra.plugin.dbt.cli.DbtCLI
+    containerImage: ghcr.io/dbt-labs/dbt-bigquery:1.8.latest
+    namespaceFiles:
+      enabled: true
+      include:
+        - gcp-key.json
+        - dbt/**
+    projectDir: dbt
+    profiles: dbt
+    env:
+      GCP_PROJECT: "{{ kv('GCP_PROJECT') }}"
+      BQ_REGION: "{{ kv('BQ_REGION') }}"
+      WAREHOUSE_DATASET: "{{ kv('WAREHOUSE_DATASET') }}"
+    commands:
+      - export GOOGLE_APPLICATION_CREDENTIALS="$WORKING_DIR/gcp-key.json" && dbt deps --project-dir dbt --profiles-dir dbt
+      - export GOOGLE_APPLICATION_CREDENTIALS="$WORKING_DIR/gcp-key.json" && dbt seed --project-dir dbt --profiles-dir dbt --target prod
+      - export GOOGLE_APPLICATION_CREDENTIALS="$WORKING_DIR/gcp-key.json" && dbt run  --project-dir dbt --profiles-dir dbt --target prod
+      - export GOOGLE_APPLICATION_CREDENTIALS="$WORKING_DIR/gcp-key.json" && dbt test --project-dir dbt --profiles-dir dbt --target prod
+
+errors:
+  - id: on_failure
+    type: io.kestra.plugin.core.log.Log
+    level: ERROR
+    message: "dbt run or test failed. Check the execution logs in the Kestra UI."

@@ -1,0 +1,75 @@
+id: 03_setup_external_tables
+namespace: colombia_env
+
+description: |
+  One-shot DDL flow that creates the BigQuery external tables pointing at the
+  raw parquet files in GCS. Ensures the GCS bucket exists before running DDL.
+
+tasks:
+  - id: create_weather_external
+    type: io.kestra.plugin.gcp.bigquery.Query
+    projectId: "{{ kv('GCP_PROJECT') }}"
+    sql: |
+      CREATE OR REPLACE EXTERNAL TABLE `{{ kv('GCP_PROJECT') }}.{{ kv('RAW_DATASET') }}.ext_weather_hourly`
+      WITH PARTITION COLUMNS (
+        city_id STRING,
+        year    INT64,
+        month   INT64
+      )
+      OPTIONS (
+        format = 'PARQUET',
+        uris = ['gs://{{ kv('GCS_BUCKET') }}/raw/weather/*'],
+        hive_partition_uri_prefix = 'gs://{{ kv('GCS_BUCKET') }}/raw/weather'
+      );
+
+  - id: create_weather_daily_external
+    type: io.kestra.plugin.gcp.bigquery.Query
+    projectId: "{{ kv('GCP_PROJECT') }}"
+    sql: |
+      CREATE OR REPLACE EXTERNAL TABLE `{{ kv('GCP_PROJECT') }}.{{ kv('RAW_DATASET') }}.ext_weather_daily`
+      WITH PARTITION COLUMNS (
+        year  INT64,
+        month INT64,
+        day   INT64
+      )
+      OPTIONS (
+        format = 'PARQUET',
+        uris = ['gs://{{ kv('GCS_BUCKET') }}/raw/weather_daily/*'],
+        hive_partition_uri_prefix = 'gs://{{ kv('GCS_BUCKET') }}/raw/weather_daily'
+      );
+
+  - id: create_air_quality_external
+    type: io.kestra.plugin.gcp.bigquery.Query
+    projectId: "{{ kv('GCP_PROJECT') }}"
+    sql: |
+      CREATE OR REPLACE EXTERNAL TABLE `{{ kv('GCP_PROJECT') }}.{{ kv('RAW_DATASET') }}.ext_air_quality`
+      WITH PARTITION COLUMNS (
+        year  INT64,
+        month INT64,
+        day   INT64
+      )
+      OPTIONS (
+        format = 'PARQUET',
+        uris = ['gs://{{ kv('GCS_BUCKET') }}/raw/air_quality/*'],
+        hive_partition_uri_prefix = 'gs://{{ kv('GCS_BUCKET') }}/raw/air_quality'
+      );
+
+  - id: create_streaming_external
+    type: io.kestra.plugin.gcp.bigquery.Query
+    projectId: "{{ kv('GCP_PROJECT') }}"
+    sql: |
+      CREATE OR REPLACE EXTERNAL TABLE `{{ kv('GCP_PROJECT') }}.{{ kv('RAW_DATASET') }}.ext_weather_streaming`
+      WITH PARTITION COLUMNS (
+        year  INT64,
+        month INT64,
+        day   INT64
+      )
+      OPTIONS (
+        format = 'PARQUET',
+        uris = ['gs://{{ kv('GCS_BUCKET') }}/streaming/weather/*'],
+        hive_partition_uri_prefix = 'gs://{{ kv('GCS_BUCKET') }}/streaming/weather'
+      );
+
+  - id: done
+    type: io.kestra.plugin.core.log.Log
+    message: "External tables created in dataset {{ kv('RAW_DATASET') }}"
